@@ -102,8 +102,13 @@ class Field
     end
 
     def add_entity()
-        i, j = rand(@size), rand(@size)
-        @data[i][j] = Parts[3]
+        while true
+          i, j = rand(@size), rand(@size)
+          if @data[i][j] == Parts[0]
+            @data[i][j] = Parts[3]
+            break
+          end
+        end
     end
 
     def render_game_over()
