@@ -1,16 +1,6 @@
 require 'curses'
 
-class View
-    def render(buffer)
-        # clear()
-        Curses.setpos(0, 0)
-        Curses.addstr(buffer)
-        Curses.refresh()
-    end
-end
-
 class Snake
-    attr_writer :direction
     attr_reader :coords
 
     def initialize(name, field)
@@ -18,8 +8,24 @@ class Snake
         @field = field
         @coords = Array.new(4) {|i| [0, i]}
         @direction = 'right'
-        
     end
+
+    def setUpDirection()
+        @direction = 'up' if @direction != 'down'
+    end
+
+    def setDownDirection()
+        @direction = 'down' if @direction != 'up'
+    end
+
+    def setRightDirection()
+        @direction = 'right' if @direction != 'left'
+    end
+
+    def setLeftDirection()
+        @direction = 'left' if @direction != 'right'
+    end
+
 
     def move()
         head = @coords.last.clone()
@@ -43,6 +49,9 @@ class Snake
             @field.add_entity()
         else
             @coords.shift()
+        end
+        if @coords.uniq.count() != @coords.count()
+            @field.render_game_over()
         end
 
     end
@@ -86,13 +95,23 @@ class Field
             end
             buffer += row + "\n"
         end
-        View.new.render(buffer)
+        Curses.setpos(0, 0)
+        Curses.addstr(buffer)
+        Curses.refresh()
         
     end
 
     def add_entity()
         i, j = rand(@size), rand(@size)
         @data[i][j] = Parts[3]
+    end
+
+    def render_game_over()
+        Curses.setpos(15, 25)
+        Curses.addstr('Game Over')
+        Curses.refresh()
+        sleep(2)
+        exit()
     end
 
     private
@@ -124,13 +143,13 @@ begin
         ch = Curses.getch()
         case ch
         when Curses::KEY_UP
-            field.snake.direction = "up"
+            field.snake.setUpDirection()
         when Curses::KEY_DOWN
-            field.snake.direction = "down"
+            field.snake.setDownDirection()
         when Curses::KEY_LEFT
-            field.snake.direction = "left"
+            field.snake.setLeftDirection()
         when Curses::KEY_RIGHT
-            field.snake.direction = "right"
+            field.snake.setRightDirection()
         end
     end
 
