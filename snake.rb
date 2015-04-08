@@ -1,31 +1,40 @@
 require 'curses'
-include Curses
+
+class View
+    def render(buffer)
+        # clear()
+        Curses.setpos(0, 0)
+        Curses.addstr(buffer)
+        Curses.refresh()
+    end
+end
 
 class Snake
+    attr_writer :direction
     attr_reader :coords
+
     def initialize(name, field)
         @name = name
         @field = field
         @coords = Array.new(4) {|i| [0, i]}
+        @direction = 'right'
         
     end
 
     def move()
-        
-        direction = 'down'
-
-        case direction
+        head = @coords.last.clone()
+        case @direction
         when 'left'
-            head = [0, @coords.last[1] + 1]
-            head.last = 0 if head.last > @field.size
+            head[1] -= 1
+            head[1] = @field.size - 1 if head[1] < 0
         when 'right'
-            head = [0, @coords.last[1] - 1]
-            head.last = @field.size - 1 if head.last < 0
+            head[1] += 1
+            head[1] = 0 if head[1] >= @field.size
         when 'down'
-            head = [@coords.last[0] + 1, 0]
+            head[0] += 1
             head[0] = 0 if head[0] >= @field.size
         when 'up'
-            head = [@coords.last[0] - 1, 0]
+            head[0] -= 1
             head[0] = @field.size - 1 if head[0] < 0
         end
         @coords << head
@@ -40,17 +49,17 @@ class Snake
 end
 
 class Field
-    attr_reader :size
+    attr_reader :size, :snake
     Parts = [' . ', ' * ', ' # ', ' & ']
     def initialize(size)
         @size = size
         @data = Array.new(size){Array.new(size) { Parts[0] }}
-        @snake = Snake.new("Joe", self)
         add_entity()
+        @snake = Snake.new("Joe", self)
     end
 
     def has_entity?(point)
-        @data[point[0]][point[1]] == Parts.last
+        return @data[point[0]][point[1]] == Parts[3]
     end
 
     def render()
@@ -60,25 +69,30 @@ class Field
         
         for i in 0...@size
             for j in 0...@size
-                @data[i][j] = Parts.first
+                if @data[i][j] == Parts[1] or @data[i][j] == Parts[2]
+                    @data[i][j] = Parts[0]
+                end
             end
         end
         
         _render_snake()
 
+        buffer = ''
         # Render data
         for i in 0...@size
-            buffer = ''
+            row = ''
             for j in 0...@size
-                buffer += @data[i][j]
+                row += @data[i][j]
             end
-            puts buffer
+            buffer += row + "\n"
         end
+        View.new.render(buffer)
         
     end
 
     def add_entity()
-        @data[rand(0...@size)][rand(0...@size)] = Parts.last
+        i, j = rand(@size), rand(@size)
+        @data[i][j] = Parts[3]
     end
 
     private
@@ -93,11 +107,34 @@ class Field
     
 end
 
+Curses.init_screen()
+begin
+    Curses.stdscr.keypad = true
+    Curses.nonl()
+    Curses.cbreak()
+    Curses.noecho()
 
-field = Field.new(8)
+    Curses.timeout=0
+    
+    field = Field.new(8)
 
-while true
-    field.render()
-    sleep(0.4)
+    while true
+        field.render()
+        sleep(0.4)
+        ch = Curses.getch()
+        case ch
+        when Curses::KEY_UP
+            field.snake.direction = "up"
+        when Curses::KEY_DOWN
+            field.snake.direction = "down"
+        when Curses::KEY_LEFT
+            field.snake.direction = "left"
+        when Curses::KEY_RIGHT
+            field.snake.direction = "right"
+        end
+    end
 
+    # getch()
+ensure
+    Curses.close_screen()
 end
